@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Love Notes</title>
+<meta name="description" content="A little literary corner of love notes, changing scenery, and a gentle knock at 9:11.">
+
+<!-- PWA / installability -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#2a1220">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Love Notes">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="icon" href="./icons/icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<style>
+  /* ---------- Design tokens ---------- */
+  :root{
+    --ink-wine:#2a1220;
+    --ink-wine-deep:#180a12;
+    --parchment:#f3e7cf;
+    --parchment-dim:#d9c8a6;
+    --antique-gold:#c9a15c;
+    --antique-gold-soft:#e3c690;
+    --dusk-rose:#c97c82;
+    --midnight-indigo:#1b2340;
+    --faded-sage:#8a9a83;
+
+    --font-display:'Cormorant Garamond', 'EB Garamond', Georgia, serif;
+    --font-ui:'Lora', Georgia, serif;
+
+    --card-bg: rgba(20, 10, 15, 0.62);
+    --card-border: rgba(201,161,92,0.38);
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; margin:0; }
+  body{
+    font-family: var(--font-ui);
+    color: var(--parchment);
+    overflow:hidden;
+    background: var(--ink-wine-deep);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #app{
+    position: fixed; inset: 0;
+    display:flex; flex-direction:column;
+    overflow:hidden;
+  }
+
+  /* ---------- Scene layer ---------- */
+  .scene{
+    position:absolute; inset:0;
+    overflow:hidden;
+    transition: opacity 900ms ease;
+  }
+  .scene svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .scene .stars, .scene .fireflies, .scene .lights{ position:absolute; inset:0; pointer-events:none; }
+  .scene .dot{
+    position:absolute; border-radius:50%;
+    background: var(--parchment);
+    opacity:.85;
+    animation: twinkle 4.5s ease-in-out infinite;
+  }
+  .scene .firefly{ background: var(--antique-gold-soft); box-shadow: 0 0 6px 1px var(--antique-gold-soft); }
+  @keyframes twinkle{
+    0%,100%{ opacity:.15; transform: scale(.85); }
+    50%{ opacity:.95; transform: scale(1.1); }
+  }
+  @keyframes drift{
+    0%{ transform: translate(0,0); }
+    50%{ transform: translate(6px,-10px); }
+    100%{ transform: translate(0,0); }
+  }
+
+  .vignette{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(70% 45% at 50% 58%, rgba(12,6,10,0.28) 0%, transparent 70%),
+      radial-gradient(120% 90% at 50% 40%, transparent 0%, transparent 35%, rgba(15,7,11,0.6) 100%);
+    pointer-events:none;
+  }
+
+  /* ---------- Chrome: top ---------- */
+  .chrome-top{
+    position:relative; z-index:5;
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding: calc(20px + var(--safe-t)) calc(18px + var(--safe-r)) 0 calc(20px + var(--safe-l));
+  }
+  .dateline{
+    margin:0; font-size:.72rem; letter-spacing:.09em;
+    text-transform: uppercase;
+    color: var(--parchment-dim);
+    opacity:.75;
+    font-weight: 500;
+    padding-top: 10px;
+  }
+
+  .seal{
+    width:46px; height:46px; border-radius:50%;
+    border: none; cursor:pointer;
+    background:
+      radial-gradient(circle at 32% 28%, rgba(255,255,255,0.18), transparent 45%),
+      radial-gradient(circle at 65% 70%, var(--ink-wine) 0%, var(--ink-wine-deep) 100%);
+    box-shadow: 0 2px 3px rgba(0,0,0,.35) inset, 0 3px 8px rgba(0,0,0,.4), 0 0 0 1.5px var(--antique-gold);
+    color: var(--antique-gold-soft);
+    font-size: 19px;
+    display:flex; align-items:center; justify-content:center;
+    transition: transform .25s ease;
+    flex-shrink:0;
+  }
+  .seal:active{ transform: scale(.92); }
+
+  /* ---------- Stage / quote card ---------- */
+  .stage{
+    position:relative; z-index:4;
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 12px 24px;
+    gap: 18px;
+    opacity:0;
+    transform: translateY(10px);
+    animation: rise 900ms 150ms cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes rise{ to{ opacity:1; transform: translateY(0); } }
+
+  .quote-card{
+    max-width: 520px;
+    width:100%;
+    padding: 34px 30px 28px;
+    text-align:center;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    backdrop-filter: blur(16px) saturate(140%);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    box-shadow: 0 18px 50px rgba(0,0,0,.35);
+  }
+  .ornament{
+    display:block; color: var(--antique-gold);
+    font-size: 1.15rem; margin-bottom: 10px; opacity:.8;
+  }
+  .quote-text{
+    margin: 0;
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(1.28rem, 4.6vw, 1.9rem);
+    line-height: 1.48;
+    color: var(--parchment);
+  }
+  .quote-author{
+    margin: 16px 0 2px;
+    font-family: var(--font-ui);
+    font-size: .74rem;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--antique-gold-soft);
+    font-weight: 500;
+  }
+  .quote-source{
+    margin:0; font-size:.78rem; font-style: italic;
+    color: var(--parchment-dim); opacity:.75;
+  }
+
+  .shuffle-link{
+    background:none; border:none; cursor:pointer;
+    font-family: var(--font-ui); font-size:.78rem; letter-spacing:.06em;
+    color: var(--parchment-dim);
+    opacity:.7;
+    padding: 8px 12px;
+    transition: opacity .2s ease;
+  }
+  .shuffle-link:hover, .shuffle-link:active{ opacity:1; }
+
+  /* ---------- Chrome: bottom ---------- */
+  .chrome-bottom{
+    position:relative; z-index:5;
+    text-align:center;
+    padding: 0 20px calc(18px + var(--safe-b));
+  }
+  .next-whisper{
+    margin:0; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase;
+    color: var(--parchment-dim); opacity:.6;
+  }
+
+  /* ---------- Notification banner ---------- */
+  .notif-banner{
+    position:absolute; left:16px; right:16px; bottom: calc(56px + var(--safe-b));
+    z-index: 6;
+    background: var(--ink-wine);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    box-shadow: 0 12px 30px rgba(0,0,0,.4);
+    display:flex; flex-direction:column; gap:10px;
+    animation: rise 500ms ease forwards;
+  }
+  .notif-banner p{ margin:0; font-size:.86rem; color: var(--parchment); }
+  .notif-actions{ display:flex; gap:10px; justify-content:flex-end; }
+  .notif-actions button{
+    font-family: var(--font-ui); font-size:.76rem; letter-spacing:.03em;
+    padding: 8px 14px; border-radius: 999px; cursor:pointer;
+    border: 1px solid var(--card-border); background: transparent; color: var(--parchment-dim);
+  }
+  .notif-actions button#notifYes{
+    background: var(--antique-gold); color: var(--ink-wine-deep); border-color: var(--antique-gold);
+    font-weight: 600;
+  }
+
+  /* ---------- Info drawer (the "letter") ---------- */
+  .drawer-scrim{
+    position:fixed; inset:0; z-index:9;
+    background: rgba(10,5,8,.5);
+    opacity:0; pointer-events:none;
+    transition: opacity .3s ease;
+  }
+  .drawer-scrim.open{ opacity:1; pointer-events:auto; }
+
+  .drawer{
+    position:fixed; z-index:10;
+    top:0; right:0; bottom:0;
+    width: min(380px, 88vw);
+    background: linear-gradient(180deg, var(--ink-wine) 0%, var(--ink-wine-deep) 100%);
+    border-left: 1px solid var(--card-border);
+    transform: translateX(100%);
+    transition: transform .38s cubic-bezier(.2,.8,.2,1);
+    padding: calc(24px + var(--safe-t)) 26px calc(24px + var(--safe-b));
+    overflow-y:auto;
+  }
+  .drawer.open{ transform: translateX(0); }
+  .drawer-close{
+    background:none; border:none; color: var(--parchment-dim); font-size:1.1rem;
+    cursor:pointer; position:absolute; top: calc(20px + var(--safe-t)); right:20px;
+  }
+  .drawer-eyebrow{
+    margin: 6px 0 14px; font-size:.7rem; letter-spacing:.14em; text-transform:uppercase;
+    color: var(--antique-gold-soft); font-weight:600;
+  }
+  .drawer-quote{
+    font-family: var(--font-display); font-style:italic; font-size:1.15rem;
+    color: var(--parchment); line-height:1.5; margin: 0 0 18px;
+    padding-bottom: 16px; border-bottom: 1px solid var(--card-border);
+  }
+  .drawer-body{
+    font-family: var(--font-ui); font-size:.95rem; line-height:1.7;
+    color: var(--parchment-dim); margin: 0 0 14px;
+  }
+  .drawer-citation{
+    font-size:.78rem; font-style:italic; color: var(--antique-gold-soft); opacity:.85; margin:0;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .stage{ animation: none; opacity:1; transform:none; }
+    .scene .dot{ animation: none; opacity:.6; }
+  }
+
+  @media (display-mode: standalone){
+    .chrome-top{ padding-top: calc(14px + var(--safe-t)); }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="scene" id="scene" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <header class="chrome-top">
+    <p class="dateline" id="dateline"></p>
+    <button class="seal" id="infoBtn" aria-label="Why this line was chosen">
+      <span aria-hidden="true">❦</span>
+    </button>
+  </header>
+
+  <main class="stage">
+    <blockquote class="quote-card" id="quoteCard">
+      <span class="ornament" aria-hidden="true">❧</span>
+      <p class="quote-text" id="quoteText"></p>
+      <footer>
+        <p class="quote-author" id="quoteAuthor"></p>
+        <p class="quote-source" id="quoteSource"></p>
+      </footer>
+    </blockquote>
+    <button class="shuffle-link" id="shuffleBtn">✦ another line</button>
+  </main>
+
+  <footer class="chrome-bottom">
+    <p class="next-whisper" id="nextWhisper"></p>
+  </footer>
+
+  <div class="notif-banner" id="notifBanner" hidden>
+    <p>A gentle knock at 9:11, morning and night?</p>
+    <div class="notif-actions">
+      <button id="notifNo" type="button">Not now</button>
+      <button id="notifYes" type="button">Yes, remind me</button>
+    </div>
+  </div>
+</div>
+
+<div class="drawer-scrim" id="drawerScrim"></div>
+<aside class="drawer" id="infoDrawer" aria-hidden="true">
+  <button class="drawer-close" id="drawerClose" aria-label="Close">✕</button>
+  <p class="drawer-eyebrow">Why this line</p>
+  <p class="drawer-quote" id="drawerQuote"></p>
+  <p class="drawer-body" id="drawerBody"></p>
+  <p class="drawer-citation" id="drawerCitation"></p>
+</aside>
+
+<script>
+/* =========================================================
+   Personalize me
+   ========================================================= */
+const RECIPIENT_NAME = ""; // e.g. "Ada" — leave blank to skip the name entirely
+const NOTIFY_HOUR_MIN = 11;   // the ":11" in 9:11
+const NOTIFY_HOURS = [9, 21]; // 24h clock — 9 = 9am, 21 = 9pm
+
+/* =========================================================
+   The quotes — public-domain literary lines on love
+   ========================================================= */
+const QUOTES = [
+  { text:"How do I love thee? Let me count the ways. I love thee to the depth and breadth and height my soul can reach.",
+    author:"Elizabeth Barrett Browning", source:"Sonnets from the Portuguese, Sonnet 43", mood:"devotion",
+    info:"Browning wrote this sonnet in secret during her courtship with fellow poet Robert Browning, whom her father forbade her to marry. The counting itself is the argument — love this large can't be summarized, only tallied line by line." },
+  { text:"Let me not to the marriage of true minds admit impediments. Love is not love which alters when it alteration finds.",
+    author:"William Shakespeare", source:"Sonnet 116", mood:"eternal",
+    info:"One of Shakespeare's most-quoted sonnets, still read at weddings four centuries later. It argues that real love holds its shape under pressure — the opposite of a feeling that changes when circumstances do." },
+  { text:"Love looks not with the eyes, but with the mind, and therefore is winged Cupid painted blind.",
+    author:"William Shakespeare", source:"A Midsummer Night's Dream", mood:"tender",
+    info:"Spoken by Helena while she's loving someone who barely notices her, this line is the source of the phrase \u201clove is blind\u201d — affection can see worth that plain eyesight misses." },
+  { text:"My bounty is as boundless as the sea, my love as deep; the more I give to thee, the more I have, for both are infinite.",
+    author:"William Shakespeare", source:"Romeo and Juliet, Act II", mood:"passion",
+    info:"Juliet says this from her balcony, describing a love that grows the more it's spent — a small piece of math that turns scarcity thinking upside down." },
+  { text:"Whatever our souls are made of, his and mine are the same.",
+    author:"Emily Bront\u00eb", source:"Wuthering Heights", mood:"eternal",
+    info:"Catherine's line about Heathcliff is one of English fiction's boldest claims of soulmate-level union — not that they complement each other, but that they're made of the same material." },
+  { text:"If all else perished, and he remained, I should still continue to be.",
+    author:"Emily Bront\u00eb", source:"Wuthering Heights", mood:"devotion",
+    info:"An intense, almost frightening declaration that one person's presence outweighs everything else in the world — part of why this novel is still argued over as either the greatest or the most dangerous love story in English." },
+  { text:"You pierce my soul. I am half agony, half hope.",
+    author:"Jane Austen", source:"Persuasion", mood:"longing",
+    info:"From Captain Wentworth's letter to Anne Elliot after eight years apart. Austen, usually so restrained, lets her hero say the quiet part outright — hope and dread arriving in the same breath." },
+  { text:"I love you the more in that I believe you have liked me for my own sake and for nothing else.",
+    author:"John Keats", source:"letter to Fanny Brawne", mood:"tender",
+    info:"Keats wrote this to the woman he loved while dying young of tuberculosis. It values being loved for exactly who you are, with nothing performed and nothing required in return." },
+  { text:"She walks in beauty, like the night of cloudless climes and starry skies.",
+    author:"Lord Byron", source:"She Walks in Beauty", mood:"admiration",
+    info:"Byron wrote this after seeing his cousin at a party, dressed in mourning black spangled with sequins. The beauty he describes isn't loud — it's the quiet balance of light and dark meeting in one face." },
+  { text:"Remember me when I am gone away, gone far away into the silent land.",
+    author:"Christina Rossetti", source:"Remember", mood:"bittersweet",
+    info:"A sonnet that asks to be remembered, then gently changes its mind — better to be forgotten a while and smile, it says, than remembered and be sad. Tenderness without possessiveness." },
+  { text:"Grow old along with me! The best is yet to be.",
+    author:"Robert Browning", source:"Rabbi Ben Ezra", mood:"devotion",
+    info:"An optimist's vow that love's finest chapter is still ahead rather than behind — a line that's found its way onto more anniversary cards than almost any other in English verse." },
+  { text:"To love oneself is the beginning of a lifelong romance.",
+    author:"Oscar Wilde", source:"An Ideal Husband", mood:"playful",
+    info:"Classic Wilde wit, often quoted today far from its original context — a reminder that the capacity to love someone else usually starts somewhere closer to home." },
+  { text:"And the sunlight clasps the earth, and the moonbeams kiss the sea; what are all these kissings worth, if thou kiss not me?",
+    author:"Percy Bysshe Shelley", source:"Love's Philosophy", mood:"passion",
+    info:"Shelley builds his entire argument for a kiss out of the natural world — rivers mingle, mountains touch heaven, waves clasp one another. If everything else is allowed to touch, why not us?" },
+  { text:"I wonder by my troth, what thou and I did, till we loved.",
+    author:"John Donne", source:"The Good-Morrow", mood:"devotion",
+    info:"Donne opens this poem by suggesting that nothing before this love really counted as living. It's the metaphysical poets' favorite trick — turning romance into a small, sharp argument." },
+  { text:"'Tis better to have loved and lost than never to have loved at all.",
+    author:"Alfred, Lord Tennyson", source:"In Memoriam A.H.H.", mood:"bittersweet",
+    info:"Written after the sudden death of Tennyson's closest friend, this line has long since outgrown its original grief to become the standard comfort offered for any love that ended too soon." },
+  { text:"That love is all there is, is all we know of love.",
+    author:"Emily Dickinson", source:"untitled", mood:"eternal",
+    info:"Two lines, no metaphor, no argument — Dickinson at her most compressed, treating love as a fact so complete it doesn't need explaining, only stating." },
+  { text:"We were together. I forget the rest.",
+    author:"Walt Whitman", source:"notebook fragment", mood:"tender",
+    info:"One of the shortest lines here, and one of the quietest — everything else about the memory has faded except the single fact of being together." },
+  { text:"Set me as a seal upon thine heart, for love is strong as death; many waters cannot quench love, neither can the floods drown it.",
+    author:"Song of Solomon", source:"Song of Solomon 8:6\u20137, King James Version", mood:"passion",
+    info:"Ancient Hebrew love poetry, thousands of years old, and still the line most often engraved inside rings — love described not as a feeling but as a force nothing can put out." },
+  { text:"If thou must love me, let it be for nought except for love's sake only.",
+    author:"Elizabeth Barrett Browning", source:"Sonnets from the Portuguese, Sonnet 14", mood:"devotion",
+    info:"Browning asks to be loved without reasons attached — not for her smile, her comfort, or anything she provides, since only love with no reason can survive the reason disappearing." },
+  { text:"Shall I compare thee to a summer's day? Thou art more lovely and more temperate.",
+    author:"William Shakespeare", source:"Sonnet 18", mood:"admiration",
+    info:"Possibly the most famous opening line in English poetry. Shakespeare's real claim isn't the compliment — it's that the poem itself will outlast the summer, and so will the person it describes." },
+  { text:"O my Luve's like a red, red rose, that's newly sprung in June.",
+    author:"Robert Burns", source:"A Red, Red Rose", mood:"passion",
+    info:"Burns wrote this as a song lyric shortly before a long voyage, comparing love to something freshly, urgently alive. It's still sung at weddings and Burns Night suppers alike." },
+  { text:"Come live with me and be my love, and we will all the pleasures prove.",
+    author:"Christopher Marlowe", source:"The Passionate Shepherd to His Love", mood:"playful",
+    info:"One of the earliest and most imitated invitation-poems in English — a sunny, uncomplicated plea to drop everything else for love, answered by poets for centuries after." }
+];
+
+/* =========================================================
+   The scenes — generated, literary-romantic backdrops
+   (deliberately illustrative rather than photographic, so
+   the app always renders instantly, works offline, and
+   never shows a mismatched stock photo)
+   ========================================================= */
+const SCENES = [
+  { id:"midnight_beach", moods:["passion","longing","eternal"],
+    gradient:"linear-gradient(150deg,#060b1f 0%,#0d1b3d 48%,#20315c 100%)",
+    build:(el)=>{
+      el.innerHTML += svgWrap(`
+        <circle cx="76" cy="38" r="15" fill="#f3e7cf" opacity="0.12"/>
+        <circle cx="76" cy="38" r="6.5" fill="#f3e7cf" opacity="0.95"/>
+        <path d="M0,150 Q25,146 50,150 T100,148 V200 H0 Z" fill="#0a1730" opacity="0.92"/>
+      `);
+      addWaterShimmer(el);
+      addStars(el, 26, 0, 55);
+    }},
+  { id:"eiffel_dusk", moods:["admiration","passion","devotion"],
+    gradient:"linear-gradient(150deg,#2a1220 0%,#5b2a3d 46%,#c97c82 100%)",
+    build:(el)=>{
+      el.innerHTML += svgWrap(towerSVG());
+      addStars(el, 10, 0, 35);
+    }},
+  { id:"candlelit_library", moods:["devotion","tender","eternal"],
+    gradient:"linear-gradient(150deg,#1c1108 0%,#3b2312 52%,#6b3d1c 100%)",
+    build:(el)=>{ el.innerHTML += svgWrap(librarySVG()); addCandleGlow(el); }},
+  { id:"rose_veranda", moods:["tender","admiration","playful"],
+    gradient:"linear-gradient(150deg,#2a1220 0%,#6b3550 48%,#c9a15c 100%)",
+    build:(el)=>{ el.innerHTML += svgWrap(archSVG()); addFireflies(el, 10); }},
+  { id:"venice_canal", moods:["longing","bittersweet","admiration"],
+    gradient:"linear-gradient(150deg,#08201f 0%,#124038 46%,#c9a15c 100%)",
+    build:(el)=>{ el.innerHTML += svgWrap(gondolaSVG()); addWaterShimmer(el); }},
+  { id:"starlit_meadow", moods:["eternal","tender","bittersweet"],
+    gradient:"linear-gradient(150deg,#0c1024 0%,#1b2340 55%,#2f3b63 100%)",
+    build:(el)=>{ el.innerHTML += svgWrap(hillsSVG()); addStars(el, 34, 0, 60); addFireflies(el, 6); }},
+  { id:"vineyard_sunset", moods:["passion","playful","admiration"],
+    gradient:"linear-gradient(150deg,#2a1220 0%,#7a3b2e 46%,#c9a15c 100%)",
+    build:(el)=>{ el.innerHTML += svgWrap(vineyardSVG()); }},
+  { id:"misty_dawn", moods:["longing","bittersweet","tender"],
+    gradient:"linear-gradient(150deg,#1c2233 0%,#3c4a5e 52%,#8a9a95 100%)",
+    build:(el)=>{ el.innerHTML += svgWrap(mistySVG()); }}
+];
+
+/* ---- svg helpers (kept intentionally simple / linework) ---- */
+function svgWrap(inner){
+  return `<svg viewBox="0 0 100 200" preserveAspectRatio="xMidYMax slice">${inner}</svg>`;
+}
+function towerSVG(){
+  return `
+    <g stroke="#f3e7cf" stroke-width="0.4" fill="none" opacity="0.85">
+      <path d="M46,185 L54,185 L51.4,140 L48.6,140 Z" fill="#180a12" stroke="none"/>
+      <path d="M48.6,140 L43,95 M51.4,140 L57,95 M43,95 L57,95" />
+      <path d="M43,95 L48,45 M57,95 L52,45 M48,45 L52,45" />
+      <path d="M40,155 L60,155 M42.5,170 L57.5,170" />
+      <line x1="50" y1="45" x2="50" y2="25" />
+    </g>
+    <circle cx="50" cy="26" r="1" fill="#e3c690"/>
+    <line x1="0" y1="185" x2="100" y2="185" stroke="#f3e7cf" stroke-width="0.3" opacity="0.25"/>
+  `;
+}
+function librarySVG(){
+  let shelves = "";
+  for(let r=0; r<3; r++){
+    let y = 66 + r*40, x = 4, books="";
+    while(x < 96){
+      const w = 2 + Math.random()*3;
+      const h = 18 + Math.random()*12;
+      books += `<rect x="${x}" y="${y+(36-h)}" width="${w}" height="${h}" fill="#180a12" opacity="${0.55+Math.random()*0.3}"/>`;
+      x += w + 0.6;
+    }
+    shelves += books + `<rect x="0" y="${y+36}" width="100" height="1.6" fill="#180a12" opacity="0.7"/>`;
+  }
+  return shelves;
+}
+function archSVG(){
+  return `
+    <g stroke="#f3e7cf" stroke-width="0.4" fill="none" opacity="0.7">
+      <path d="M18,197 L18,76 Q18,30 50,30 Q82,30 82,76 L82,197" />
+      <path d="M24,197 L24,84 Q24,44 50,44 Q76,44 76,84 L76,197" opacity="0.5"/>
+    </g>
+    <g stroke="#c97c82" stroke-width="0.5" fill="none" opacity="0.8">
+      <path d="M18,112 Q6,100 14,80 Q22,62 14,44" />
+      <path d="M82,102 Q95,90 88,66 Q80,50 90,32" />
+    </g>
+  `;
+}
+function gondolaSVG(){
+  return `
+    <g stroke="#f3e7cf" stroke-width="0.4" fill="none" opacity="0.75">
+      <path d="M30,178 Q50,170 70,178 L66,187 Q50,182 34,187 Z" fill="#08201f" stroke="none"/>
+      <path d="M64,178 Q64,148 55,126" />
+      <path d="M12,197 L88,197 M20,192 L80,192" opacity="0.4"/>
+    </g>
+  `;
+}
+function hillsSVG(){
+  return `
+    <path d="M0,138 Q20,112 40,130 T80,122 T100,134 V200 H0 Z" fill="#0c1024" opacity="0.85"/>
+    <path d="M0,160 Q30,144 60,160 T100,156 V200 H0 Z" fill="#080a18" opacity="0.9"/>
+  `;
+}
+function vineyardSVG(){
+  let rows = "";
+  for(let i=0;i<9;i++){
+    const y = 118 + i*9;
+    rows += `<line x1="-5" y1="${y}" x2="105" y2="${y-17}" stroke="#180a12" stroke-width="1.3" opacity="0.55"/>`;
+  }
+  return `<circle cx="78" cy="115" r="13" fill="#f3e7cf" opacity="0.5"/>` + rows;
+}
+function mistySVG(){
+  return `
+    <path d="M0,116 Q25,104 50,116 T100,112 V200 H0 Z" fill="#3c4a5e" opacity="0.4"/>
+    <path d="M0,142 Q25,132 50,144 T100,136 V200 H0 Z" fill="#2a3548" opacity="0.55"/>
+    <path d="M0,170 Q25,160 50,172 T100,164 V200 H0 Z" fill="#1c2233" opacity="0.8"/>
+    <rect x="14" y="140" width="7" height="18" fill="#1c2233" opacity="0.9"/>
+    <rect x="16.5" y="130" width="2" height="10" fill="#1c2233" opacity="0.9"/>
+    <circle cx="16.6" cy="148" r="0.6" fill="#e3c690"/>
+  `;
+}
+function addStars(el,count,minY,maxY){
+  const wrap = document.createElement("div");
+  wrap.className = "stars";
+  for(let i=0;i<count;i++){
+    const s = document.createElement("span");
+    s.className = "dot";
+    const size = 1 + Math.random()*1.6;
+    s.style.width = s.style.height = size+"px";
+    s.style.left = (Math.random()*100)+"%";
+    s.style.top = (minY + Math.random()*(maxY-minY))+"%";
+    s.style.animationDelay = (Math.random()*4)+"s";
+    s.style.animationDuration = (3+Math.random()*3)+"s";
+    wrap.appendChild(s);
+  }
+  el.appendChild(wrap);
+}
+function addFireflies(el,count){
+  const wrap = document.createElement("div");
+  wrap.className = "fireflies";
+  for(let i=0;i<count;i++){
+    const s = document.createElement("span");
+    s.className = "dot firefly";
+    s.style.width = s.style.height = (2+Math.random()*1.5)+"px";
+    s.style.left = (10+Math.random()*80)+"%";
+    s.style.top = (40+Math.random()*45)+"%";
+    s.style.animationDelay = (Math.random()*4)+"s";
+    s.style.animationDuration = (2.5+Math.random()*3)+"s, "+(3+Math.random()*3)+"s";
+    s.style.animationName = "twinkle, drift";
+    s.style.animationIterationCount = "infinite, infinite";
+    s.style.animationTimingFunction = "ease-in-out, ease-in-out";
+    wrap.appendChild(s);
+  }
+  el.appendChild(wrap);
+}
+function addWaterShimmer(el){
+  const wrap = document.createElement("div");
+  wrap.className = "lights";
+  wrap.style.cssText = "bottom:0;left:0;right:0;top:70%;background:repeating-linear-gradient(100deg, rgba(243,231,207,0.06) 0px, rgba(243,231,207,0.06) 1px, transparent 1px, transparent 14px);";
+  el.appendChild(wrap);
+}
+function addCandleGlow(el){
+  const wrap = document.createElement("div");
+  wrap.style.cssText = "position:absolute;left:12%;top:58%;width:70px;height:70px;border-radius:50%;background:radial-gradient(circle, rgba(227,198,144,0.55), transparent 70%);animation: twinkle 3.2s ease-in-out infinite;";
+  el.appendChild(wrap);
+}
+
+/* =========================================================
+   State + rendering
+   ========================================================= */
+const sceneEl = document.getElementById("scene");
+const quoteCard = document.getElementById("quoteCard");
+const els = {
+  text: document.getElementById("quoteText"),
+  author: document.getElementById("quoteAuthor"),
+  source: document.getElementById("quoteSource"),
+  dateline: document.getElementById("dateline"),
+  nextWhisper: document.getElementById("nextWhisper"),
+};
+
+function pickQuote(){
+  const lastIdx = parseInt(localStorage.getItem("ln_lastQuoteIdx") || "-1", 10);
+  let idx;
+  do { idx = Math.floor(Math.random() * QUOTES.length); }
+  while (QUOTES.length > 1 && idx === lastIdx);
+  localStorage.setItem("ln_lastQuoteIdx", String(idx));
+  return QUOTES[idx];
+}
+function pickScene(mood){
+  const matches = SCENES.filter(s => s.moods.includes(mood));
+  const pool = matches.length ? matches : SCENES;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function renderScene(scene){
+  sceneEl.style.background = scene.gradient;
+  sceneEl.innerHTML = "";
+  scene.build(sceneEl);
+}
+function renderQuote(q){
+  els.text.textContent = q.text;
+  els.author.textContent = q.author;
+  els.source.textContent = q.source;
+  document.getElementById("drawerQuote").textContent = q.text;
+  document.getElementById("drawerBody").textContent = q.info;
+  document.getElementById("drawerCitation").textContent = q.author + " — " + q.source;
+}
+function renderDateline(){
+  const d = new Date();
+  els.dateline.textContent = RECIPIENT_NAME
+    ? `${d.toLocaleDateString(undefined,{weekday:"long", month:"long", day:"numeric"})} · for ${RECIPIENT_NAME}`
+    : d.toLocaleDateString(undefined,{weekday:"long", month:"long", day:"numeric"});
+}
+function renderNextWhisper(){
+  const d = new Date();
+  const h = d.getHours();
+  const next = h < 9 ? "9:11 AM" : (h < 21 ? "9:11 PM" : "9:11 AM");
+  els.nextWhisper.textContent = `next whisper · ${next}`;
+}
+
+let currentQuote, currentScene;
+function present(){
+  currentQuote = pickQuote();
+  currentScene = pickScene(currentQuote.mood);
+  renderScene(currentScene);
+  renderQuote(currentQuote);
+  renderDateline();
+  renderNextWhisper();
+}
+
+document.getElementById("shuffleBtn").addEventListener("click", () => {
+  quoteCard.style.transition = "opacity .35s ease";
+  sceneEl.style.opacity = "0";
+  quoteCard.style.opacity = "0";
+  setTimeout(() => {
+    present();
+    sceneEl.style.opacity = "1";
+    quoteCard.style.opacity = "1";
+  }, 360);
+});
+
+/* =========================================================
+   Info drawer
+   ========================================================= */
+const infoBtn = document.getElementById("infoBtn");
+const infoDrawer = document.getElementById("infoDrawer");
+const drawerScrim = document.getElementById("drawerScrim");
+const drawerClose = document.getElementById("drawerClose");
+
+function openDrawer(){
+  infoDrawer.classList.add("open");
+  drawerScrim.classList.add("open");
+  infoDrawer.setAttribute("aria-hidden","false");
+  drawerClose.focus();
+}
+function closeDrawer(){
+  infoDrawer.classList.remove("open");
+  drawerScrim.classList.remove("open");
+  infoDrawer.setAttribute("aria-hidden","true");
+  infoBtn.focus();
+}
+infoBtn.addEventListener("click", openDrawer);
+drawerClose.addEventListener("click", closeDrawer);
+drawerScrim.addEventListener("click", closeDrawer);
+document.addEventListener("keydown", (e) => { if(e.key === "Escape") closeDrawer(); });
+
+/* =========================================================
+   9:11 notifications
+   Works reliably whenever this app/tab is open or running in
+   the background — see the README for the honest limits on
+   notifying while the app is fully closed.
+   ========================================================= */
+const notifBanner = document.getElementById("notifBanner");
+const notifYes = document.getElementById("notifYes");
+const notifNo = document.getElementById("notifNo");
+
+function maybeShowBanner(){
+  if (!("Notification" in window)) return;
+  const choice = localStorage.getItem("ln_notifChoice");
+  if (Notification.permission === "default" && !choice){
+    setTimeout(() => { notifBanner.hidden = false; }, 1400);
+  }
+}
+notifYes.addEventListener("click", async () => {
+  localStorage.setItem("ln_notifChoice", "yes");
+  notifBanner.hidden = true;
+  if ("Notification" in window) { try { await Notification.requestPermission(); } catch(e){} }
+});
+notifNo.addEventListener("click", () => {
+  localStorage.setItem("ln_notifChoice", "no");
+  notifBanner.hidden = true;
+});
+
+async function fireLoveNote(){
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const title = "🕊️ 9:11";
+  const body = "A line is waiting for you.";
+  const opts = { body, icon: "./icons/icon-192.png", badge: "./icons/icon-192.png", tag: "love-note-911" };
+  if ("serviceWorker" in navigator){
+    try{
+      const reg = await navigator.serviceWorker.ready;
+      reg.showNotification(title, opts);
+      return;
+    }catch(e){ /* fall through */ }
+  }
+  try{ new Notification(title, opts); }catch(e){}
+}
+
+function tick(){
+  renderNextWhisper();
+  const d = new Date();
+  if (d.getMinutes() === NOTIFY_HOUR_MIN && NOTIFY_HOURS.includes(d.getHours())){
+    const slotKey = `ln_notified_${d.toDateString()}_${d.getHours()}`;
+    if (!localStorage.getItem(slotKey)){
+      localStorage.setItem(slotKey, "1");
+      fireLoveNote();
+    }
+  }
+}
+setInterval(tick, 20000);
+
+/* =========================================================
+   Boot
+   ========================================================= */
+present();
+maybeShowBanner();
+if ("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
